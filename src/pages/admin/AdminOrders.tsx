@@ -47,23 +47,29 @@ const AdminOrders = () => {
   const fetchOrders = async () => {
     const { data, error } = await supabase
       .from("orders")
-      .select("id, order_number, status, total_amount, payment_method, delivery_charge, commission_amount, owner_price, delivery_address, created_at, customer_id, owner_id, delivery_staff_id, item_id, ward_id, items(name), profiles:customer_id(full_name)")
+      .select("id, order_number, status, total_amount, payment_method, delivery_charge, commission_amount, owner_price, delivery_address, created_at, customer_id, owner_id, delivery_staff_id, item_id, ward_id, items(name)")
       .order("created_at", { ascending: false });
 
-    if (!error && data) {
-      // Fetch owner + delivery staff names
-      const ids = [...new Set([...data.map(o => o.owner_id), ...data.map(o => o.delivery_staff_id)].filter(Boolean))] as string[];
-      let nameMap: Record<string, string> = {};
-      if (ids.length > 0) {
-        const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", ids);
-        nameMap = Object.fromEntries((profiles || []).map(p => [p.id, p.full_name]));
-      }
-      setOrders(data.map(o => ({
-        ...o,
-        owner_name: nameMap[o.owner_id] || "—",
-        delivery_staff_name: o.delivery_staff_id ? (nameMap[o.delivery_staff_id] || "Assigned") : null,
-      })));
+    if (error) {
+      toast({ title: "Could not load orders", description: error.message, variant: "destructive" });
+      setOrders([]);
+      setLoading(false);
+      return;
     }
+
+    const rows = data || [];
+    const ids = [...new Set(rows.flatMap(o => [o.customer_id, o.owner_id, o.delivery_staff_id]).filter(Boolean))] as string[];
+    let nameMap: Record<string, string> = {};
+    if (ids.length > 0) {
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+      nameMap = Object.fromEntries((profiles || []).map(p => [p.id, p.full_name]));
+    }
+    setOrders(rows.map(o => ({
+      ...o,
+      customer_name: nameMap[o.customer_id] || "—",
+      owner_name: nameMap[o.owner_id] || "—",
+      delivery_staff_name: o.delivery_staff_id ? (nameMap[o.delivery_staff_id] || "Assigned") : null,
+    })));
     setLoading(false);
   };
 
@@ -115,7 +121,7 @@ const AdminOrders = () => {
 
   const filtered = orders.filter(o => {
     const matchSearch = o.order_number?.toLowerCase().includes(search.toLowerCase()) ||
-      (o.profiles as any)?.full_name?.toLowerCase().includes(search.toLowerCase());
+      o.customer_name?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || o.status === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -173,7 +179,7 @@ const AdminOrders = () => {
               {filtered.map((o) => (
                 <TableRow key={o.id}>
                   <TableCell className="font-display font-medium">{o.order_number}</TableCell>
-                  <TableCell className="font-body">{(o.profiles as any)?.full_name || "—"}</TableCell>
+                  <TableCell className="font-body">{o.customer_name}</TableCell>
                   <TableCell className="hidden md:table-cell font-body text-muted-foreground">{(o.items as any)?.name || "—"}</TableCell>
                   <TableCell className="font-display font-semibold">₹{Number(o.total_amount).toLocaleString("en-IN")}</TableCell>
                   <TableCell className="hidden md:table-cell">
@@ -252,7 +258,7 @@ const AdminOrders = () => {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <div><span className="text-muted-foreground">Customer:</span><p className="font-medium text-foreground">{(selectedOrder.profiles as any)?.full_name || "—"}</p></div>
+                  <div><span className="text-muted-foreground">Customer:</span><p className="font-medium text-foreground">{selectedOrder.customer_name}</p></div>
                   <div><span className="text-muted-foreground">Vendor:</span><p className="font-medium text-foreground">{selectedOrder.owner_name}</p></div>
                 </div>
                 <div><span className="text-muted-foreground">Item:</span><p className="font-medium text-foreground">{(selectedOrder.items as any)?.name || "—"}</p></div>
