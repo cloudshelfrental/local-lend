@@ -7,7 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Search, Loader2, CheckCircle, XCircle, Users, Bell, Banknote, UserPlus, MapPin } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Search, Loader2, CheckCircle, XCircle, Users, Bell, Banknote, UserPlus, MapPin, ChevronDown } from "lucide-react";
 import DeliveryLocationsDialog from "@/components/DeliveryLocationsDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +38,7 @@ const AdminDelivery = () => {
   const [collections, setCollections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
+  const [expanded, setExpanded] = useState<string[]>([]);
   const [locStaff, setLocStaff] = useState<{ id: string; name: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ full_name: "", mobile: "", password: "", date_of_birth: "" });
@@ -410,56 +412,92 @@ const AdminDelivery = () => {
 
       {/* Active Staff */}
       <Card className="shadow-card">
-        <CardHeader><CardTitle className="font-display text-lg">Delivery Staff ({filtered.length})</CardTitle></CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Mobile</TableHead>
-                <TableHead>DOB</TableHead>
-                <TableHead className="hidden md:table-cell">Pickup Locations</TableHead>
-                <TableHead>Deliveries</TableHead>
-                <TableHead className="hidden md:table-cell">Wallet</TableHead>
-                <TableHead>Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No delivery staff found</TableCell></TableRow>
-              )}
-              {filtered.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell className="font-display font-medium">{s.name}</TableCell>
-                  <TableCell className="font-body">{s.mobile}</TableCell>
-                  <TableCell className="text-sm">{s.dob}</TableCell>
-                  <TableCell className="hidden md:table-cell font-body text-muted-foreground text-xs max-w-[240px]">
-                    {s.locations?.length ? (
-                      <div className="flex flex-wrap gap-1">
-                        {s.locations.slice(0, 4).map((l: string) => <Badge key={l} variant="secondary" className="text-[10px]">{l}</Badge>)}
-                        {s.locations.length > 4 && <Badge variant="outline" className="text-[10px]">+{s.locations.length - 4}</Badge>}
-                      </div>
-                    ) : "Not assigned"}
-                  </TableCell>
-                  <TableCell className="font-display font-semibold">{s.deliveries}</TableCell>
-                  <TableCell className="hidden md:table-cell font-display font-semibold text-accent">{s.wallet}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <CardTitle className="font-display text-lg">Delivery Staff ({filtered.length})</CardTitle>
+          {filtered.length > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs"
+              onClick={() => setExpanded(expanded.length === filtered.length ? [] : filtered.map(s => s.id))}
+            >
+              {expanded.length === filtered.length ? "Collapse all" : "Expand all"}
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {filtered.length === 0 && (
+            <p className="text-center text-muted-foreground py-8 font-body">No delivery staff found</p>
+          )}
+          {filtered.map((s) => {
+            const open = expanded.includes(s.id);
+            return (
+              <Collapsible
+                key={s.id}
+                open={open}
+                onOpenChange={() => setExpanded(prev => prev.includes(s.id) ? prev.filter(x => x !== s.id) : [...prev, s.id])}
+                className="rounded-xl border border-border bg-card"
+              >
+                <CollapsibleTrigger className="w-full flex items-center gap-3 p-4 text-left">
+                  <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center font-display font-semibold text-foreground shrink-0">
+                    {(s.name || "?").charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display font-semibold text-foreground truncate">{s.name}</p>
+                    <p className="text-xs text-muted-foreground font-body">{s.mobile}</p>
+                  </div>
+                  <div className="hidden sm:flex items-center gap-2">
+                    <Badge variant="secondary" className="text-[11px]">{s.deliveries} deliveries</Badge>
+                    <Badge variant="outline" className="text-[11px] text-accent">{s.wallet}</Badge>
+                  </div>
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="px-4 pb-4 pt-0 space-y-4 border-t border-border/60">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3">
+                      {[
+                        { label: "Mobile", value: s.mobile },
+                        { label: "Date of Birth", value: s.dob },
+                        { label: "Deliveries", value: s.deliveries },
+                        { label: "Wallet", value: s.wallet },
+                      ].map(f => (
+                        <div key={f.label} className="rounded-lg bg-secondary p-3">
+                          <p className="text-[11px] text-muted-foreground font-body">{f.label}</p>
+                          <p className="font-display font-semibold text-foreground text-sm">{f.value}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div>
+                      <p className="text-[11px] text-muted-foreground font-body mb-1">Service Area</p>
+                      <p className="font-body text-sm text-foreground">{s.area}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-[11px] text-muted-foreground font-body mb-1">Pickup Locations</p>
+                      {s.locations?.length ? (
+                        <div className="flex flex-wrap gap-1">
+                          {s.locations.map((l: string) => <Badge key={l} variant="secondary" className="text-[10px]">{l}</Badge>)}
+                        </div>
+                      ) : <p className="text-sm text-muted-foreground font-body">Not assigned</p>}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
                       <Button size="sm" variant="outline" className="text-xs" onClick={() => setLocStaff({ id: s.id, name: s.name })}>
-                        <MapPin className="h-3.5 w-3.5 mr-1" /> Locations
+                        <MapPin className="h-3.5 w-3.5 mr-1" /> Manage Locations
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => removeDelivery(s.id)}>
-                        <XCircle className="h-4 w-4 text-destructive" />
+                      <Button size="sm" variant="ghost" className="text-xs text-destructive" onClick={() => removeDelivery(s.id)}>
+                        <XCircle className="h-4 w-4 mr-1" /> Remove Staff
                       </Button>
                     </div>
-                  </TableCell>
-
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            );
+          })}
         </CardContent>
       </Card>
+
 
       <DeliveryLocationsDialog
         staffId={locStaff?.id || null}
