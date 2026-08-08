@@ -32,34 +32,75 @@ const statusLabel = (s: string) => {
 };
 
 
+const allStatuses = ["pending", "confirmed", "delivery_booked", "picked_up", "in_transit", "delivered", "return_pending", "returned", "cancelled"] as const;
+
 const AdminOrders = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [staff, setStaff] = useState<any[]>([]);
+  const [updating, setUpdating] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchOrders = async () => {
     const { data, error } = await supabase
       .from("orders")
-      .select("id, order_number, status, total_amount, payment_method, delivery_charge, commission_amount, owner_price, delivery_address, created_at, customer_id, owner_id, item_id, ward_id, items(name), profiles:customer_id(full_name)")
+      .select("id, order_number, status, total_amount, payment_method, delivery_charge, commission_amount, owner_price, delivery_address, created_at, customer_id, owner_id, delivery_staff_id, item_id, ward_id, items(name), profiles:customer_id(full_name)")
       .order("created_at", { ascending: false });
 
     if (!error && data) {
-      // Fetch owner names
-      const ownerIds = [...new Set(data.map(o => o.owner_id))];
-      let ownerMap: Record<string, string> = {};
-      if (ownerIds.length > 0) {
-        const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", ownerIds);
-        ownerMap = Object.fromEntries((profiles || []).map(p => [p.id, p.full_name]));
+      // Fetch owner + delivery staff names
+      const ids = [...new Set([...data.map(o => o.owner_id), ...data.map(o => o.delivery_staff_id)].filter(Boolean))] as string[];
+      let nameMap: Record<string, string> = {};
+      if (ids.length > 0) {
+        const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+        nameMap = Object.fromEntries((profiles || []).map(p => [p.id, p.full_name]));
       }
-      setOrders(data.map(o => ({ ...o, owner_name: ownerMap[o.owner_id] || "—" })));
+      setOrders(data.map(o => ({
+        ...o,
+        owner_name: nameMap[o.owner_id] || "—",
+        delivery_staff_name: o.delivery_staff_id ? (nameMap[o.delivery_staff_id] || "Assigned") : null,
+      })));
     }
     setLoading(false);
   };
 
-  useEffect(() => { fetchOrders(); }, []);
+  const fetchStaff = async () => {
+    const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "delivery");
+    const ids = (roles || []).map(r => r.user_id);
+    if (!ids.length) { setStaff([]); return; }
+    const { data: profiles } = await supabase.from("profiles").select("id, full_name, mobile").in("id", ids);
+    setStaff(profiles || []);
+  };
+
+  useEffect(() => { fetchOrders(); fetchStaff(); }, []);
+
+  const updateOrder = async (orderId: string, patch: Record<string, any>, message: string) => {
+    setUpdating(orderId);
+    const { error } = await supabase.from("orders").update(patch as any).eq("id", orderId);
+    setUpdating(null);
+    if (error) {
+      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: message });
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...patch } : o));
+    setSelectedOrder((prev: any) => prev && prev.id === orderId ? { ...prev, ...patch } : prev);
+    fetchOrders();
+  };
+
+  const changeStatus = (orderId: string, status: string) =>
+    updateOrder(orderId, { status }, `Status changed to ${statusLabel(status)}`);
+
+  const assignStaff = (orderId: string, value: string) => {
+    const staffId = value === "unassigned" ? null : value;
+    const order = orders.find(o => o.id === orderId);
+    const patch: Record<string, any> = { delivery_staff_id: staffId };
+    if (staffId && order && ["pending", "confirmed"].includes(order.status)) patch.status = "delivery_booked";
+    updateOrder(orderId, patch, staffId ? "Delivery staff assigned" : "Delivery staff removed");
+  };
 
   const verifyPayment = async (orderId: string) => {
     const { error } = await supabase.from("orders").update({ status: "confirmed" as any }).eq("id", orderId);
