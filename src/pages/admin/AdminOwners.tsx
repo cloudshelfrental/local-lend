@@ -53,7 +53,7 @@ const AdminOwners = () => {
           .from("profiles")
           .select("id, full_name, mobile, date_of_birth, delivery_address, created_at, panchayath_id, ward_id, panchayaths(name), wards(ward_number)")
           .in("id", ownerIds),
-        supabase.from("items").select("id, name, owner_id, is_available, price_per_day").in("owner_id", ownerIds),
+        supabase.from("items").select("id, name, owner_id, status, owner_price").in("owner_id", ownerIds),
         supabase.from("owner_areas").select("owner_id, areas(name)").in("owner_id", ownerIds),
         supabase.from("wallets").select("user_id, balance").in("user_id", ownerIds),
         supabase.from("orders").select("id, owner_id, status, total_amount").in("owner_id", ownerIds),
@@ -75,7 +75,7 @@ const AdminOwners = () => {
           panchayath: (p.panchayaths as any)?.name || "—",
           ward: (p.wards as any)?.ward_number ? `Ward ${(p.wards as any).ward_number}` : "—",
           items: myItems.length,
-          activeItems: myItems.filter(i => i.is_available).length,
+          activeItems: myItems.filter(i => i.status === "approved").length,
           itemList: myItems,
           orders: myOrders.length,
           revenue: myOrders.reduce((s: number, o: any) => s + Number(o.total_amount || 0), 0),
@@ -261,7 +261,7 @@ const AdminOwners = () => {
                   <TableCell className="font-body">{o.mobile}</TableCell>
                   <TableCell className="font-body text-muted-foreground text-sm">{o.panchayath} · {o.ward}</TableCell>
                   <TableCell className="font-body text-muted-foreground">{o.area}</TableCell>
-                  <TableCell className="font-display font-semibold">{o.items} <span className="text-xs text-muted-foreground font-body">({o.activeItems} live)</span></TableCell>
+                  <TableCell className="font-display font-semibold">{o.items} <span className="text-xs text-muted-foreground font-body">({o.activeItems} approved)</span></TableCell>
                   <TableCell className="font-display font-semibold">{o.orders}</TableCell>
                   <TableCell className="font-display font-semibold text-accent">₹{o.wallet.toLocaleString("en-IN")}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{o.joined}</TableCell>
@@ -304,7 +304,7 @@ const AdminOwners = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { label: "Items Listed", value: `${detail.items} (${detail.activeItems} live)` },
+                  { label: "Items Listed", value: `${detail.items} (${detail.activeItems} approved)` },
                   { label: "Total Orders", value: detail.orders },
                   { label: "Order Value", value: `₹${detail.revenue.toLocaleString("en-IN")}` },
                   { label: "Wallet", value: `₹${detail.wallet.toLocaleString("en-IN")}` },
@@ -325,7 +325,7 @@ const AdminOwners = () => {
                     {detail.itemList.map((i: any) => (
                       <div key={i.id} className="flex items-center justify-between text-sm p-2 rounded bg-secondary">
                         <span className="font-body">{i.name}</span>
-                        <span className="font-display font-medium">₹{Number(i.price_per_day || 0).toLocaleString("en-IN")}/day</span>
+                        <span className="font-display font-medium">₹{Number(i.owner_price || 0).toLocaleString("en-IN")}</span>
                       </div>
                     ))}
                   </div>
