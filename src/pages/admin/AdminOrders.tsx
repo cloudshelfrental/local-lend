@@ -181,7 +181,7 @@ const AdminOrders = () => {
                       {o.payment_method === "prepaid" ? "Prepaid" : "COD"}
                     </Badge>
                   </TableCell>
-                  <TableCell><Badge className={statusColors[o.status] || ""}>{statusLabel(o.status)}</Badge></TableCell>
+                  
                   <TableCell>
                     <Select value={o.status} onValueChange={(v) => changeStatus(o.id, v)} disabled={updating === o.id}>
                       <SelectTrigger className={`h-8 w-[150px] border-0 ${statusColors[o.status] || ""}`}>
