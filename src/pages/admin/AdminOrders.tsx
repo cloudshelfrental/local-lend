@@ -183,9 +183,28 @@ const AdminOrders = () => {
                   </TableCell>
                   <TableCell><Badge className={statusColors[o.status] || ""}>{statusLabel(o.status)}</Badge></TableCell>
                   <TableCell>
+                    <Select value={o.status} onValueChange={(v) => changeStatus(o.id, v)} disabled={updating === o.id}>
+                      <SelectTrigger className={`h-8 w-[150px] border-0 ${statusColors[o.status] || ""}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allStatuses.map(s => <SelectItem key={s} value={s}>{statusLabel(s)}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    <Select value={o.delivery_staff_id || "unassigned"} onValueChange={(v) => assignStaff(o.id, v)} disabled={updating === o.id}>
+                      <SelectTrigger className="h-8 w-[170px]"><SelectValue placeholder="Unassigned" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {staff.map(s => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
                     <div className="flex gap-1">
                       <Button size="sm" variant="ghost" onClick={() => setSelectedOrder(o)}>
-                        <Eye className="h-4 w-4 text-primary" />
+                        {updating === o.id ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Eye className="h-4 w-4 text-primary" />}
                       </Button>
                       {o.payment_method === "prepaid" && o.status === "pending" && (
                         <Button size="sm" variant="ghost" onClick={() => verifyPayment(o.id)}>
