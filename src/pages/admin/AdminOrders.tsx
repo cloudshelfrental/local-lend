@@ -32,34 +32,75 @@ const statusLabel = (s: string) => {
 };
 
 
+const allStatuses = ["pending", "confirmed", "delivery_booked", "picked_up", "in_transit", "delivered", "return_pending", "returned", "cancelled"] as const;
+
 const AdminOrders = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [staff, setStaff] = useState<any[]>([]);
+  const [updating, setUpdating] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchOrders = async () => {
     const { data, error } = await supabase
       .from("orders")
-      .select("id, order_number, status, total_amount, payment_method, delivery_charge, commission_amount, owner_price, delivery_address, created_at, customer_id, owner_id, item_id, ward_id, items(name), profiles:customer_id(full_name)")
+      .select("id, order_number, status, total_amount, payment_method, delivery_charge, commission_amount, owner_price, delivery_address, created_at, customer_id, owner_id, delivery_staff_id, item_id, ward_id, items(name), profiles:customer_id(full_name)")
       .order("created_at", { ascending: false });
 
     if (!error && data) {
-      // Fetch owner names
-      const ownerIds = [...new Set(data.map(o => o.owner_id))];
-      let ownerMap: Record<string, string> = {};
-      if (ownerIds.length > 0) {
-        const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", ownerIds);
-        ownerMap = Object.fromEntries((profiles || []).map(p => [p.id, p.full_name]));
+      // Fetch owner + delivery staff names
+      const ids = [...new Set([...data.map(o => o.owner_id), ...data.map(o => o.delivery_staff_id)].filter(Boolean))] as string[];
+      let nameMap: Record<string, string> = {};
+      if (ids.length > 0) {
+        const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+        nameMap = Object.fromEntries((profiles || []).map(p => [p.id, p.full_name]));
       }
-      setOrders(data.map(o => ({ ...o, owner_name: ownerMap[o.owner_id] || "—" })));
+      setOrders(data.map(o => ({
+        ...o,
+        owner_name: nameMap[o.owner_id] || "—",
+        delivery_staff_name: o.delivery_staff_id ? (nameMap[o.delivery_staff_id] || "Assigned") : null,
+      })));
     }
     setLoading(false);
   };
 
-  useEffect(() => { fetchOrders(); }, []);
+  const fetchStaff = async () => {
+    const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "delivery");
+    const ids = (roles || []).map(r => r.user_id);
+    if (!ids.length) { setStaff([]); return; }
+    const { data: profiles } = await supabase.from("profiles").select("id, full_name, mobile").in("id", ids);
+    setStaff(profiles || []);
+  };
+
+  useEffect(() => { fetchOrders(); fetchStaff(); }, []);
+
+  const updateOrder = async (orderId: string, patch: Record<string, any>, message: string) => {
+    setUpdating(orderId);
+    const { error } = await supabase.from("orders").update(patch as any).eq("id", orderId);
+    setUpdating(null);
+    if (error) {
+      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: message });
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...patch } : o));
+    setSelectedOrder((prev: any) => prev && prev.id === orderId ? { ...prev, ...patch } : prev);
+    fetchOrders();
+  };
+
+  const changeStatus = (orderId: string, status: string) =>
+    updateOrder(orderId, { status }, `Status changed to ${statusLabel(status)}`);
+
+  const assignStaff = (orderId: string, value: string) => {
+    const staffId = value === "unassigned" ? null : value;
+    const order = orders.find(o => o.id === orderId);
+    const patch: Record<string, any> = { delivery_staff_id: staffId };
+    if (staffId && order && ["pending", "confirmed"].includes(order.status)) patch.status = "delivery_booked";
+    updateOrder(orderId, patch, staffId ? "Delivery staff assigned" : "Delivery staff removed");
+  };
 
   const verifyPayment = async (orderId: string) => {
     const { error } = await supabase.from("orders").update({ status: "confirmed" as any }).eq("id", orderId);
@@ -121,12 +162,13 @@ const AdminOrders = () => {
                 <TableHead>Amount</TableHead>
                 <TableHead className="hidden md:table-cell">Payment</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="hidden lg:table-cell">Delivery Staff</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No orders found</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No orders found</TableCell></TableRow>
               )}
               {filtered.map((o) => (
                 <TableRow key={o.id}>
@@ -139,11 +181,30 @@ const AdminOrders = () => {
                       {o.payment_method === "prepaid" ? "Prepaid" : "COD"}
                     </Badge>
                   </TableCell>
-                  <TableCell><Badge className={statusColors[o.status] || ""}>{statusLabel(o.status)}</Badge></TableCell>
+                  
+                  <TableCell>
+                    <Select value={o.status} onValueChange={(v) => changeStatus(o.id, v)} disabled={updating === o.id}>
+                      <SelectTrigger className={`h-8 w-[150px] border-0 ${statusColors[o.status] || ""}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allStatuses.map(s => <SelectItem key={s} value={s}>{statusLabel(s)}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    <Select value={o.delivery_staff_id || "unassigned"} onValueChange={(v) => assignStaff(o.id, v)} disabled={updating === o.id}>
+                      <SelectTrigger className="h-8 w-[170px]"><SelectValue placeholder="Unassigned" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {staff.map(s => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       <Button size="sm" variant="ghost" onClick={() => setSelectedOrder(o)}>
-                        <Eye className="h-4 w-4 text-primary" />
+                        {updating === o.id ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Eye className="h-4 w-4 text-primary" />}
                       </Button>
                       {o.payment_method === "prepaid" && o.status === "pending" && (
                         <Button size="sm" variant="ghost" onClick={() => verifyPayment(o.id)}>
@@ -168,9 +229,27 @@ const AdminOrders = () => {
                 <DialogTitle className="font-display">{selectedOrder.order_number}</DialogTitle>
               </DialogHeader>
               <div className="space-y-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">Status:</span>
-                  <Badge className={statusColors[selectedOrder.status]}>{statusLabel(selectedOrder.status)}</Badge>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-muted/40 rounded-lg p-3">
+                  <div>
+                    <span className="text-muted-foreground text-xs">Order Status</span>
+                    <Select value={selectedOrder.status} onValueChange={(v) => changeStatus(selectedOrder.id, v)} disabled={updating === selectedOrder.id}>
+                      <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {allStatuses.map(s => <SelectItem key={s} value={s}>{statusLabel(s)}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-xs">Delivery Staff</span>
+                    <Select value={selectedOrder.delivery_staff_id || "unassigned"} onValueChange={(v) => assignStaff(selectedOrder.id, v)} disabled={updating === selectedOrder.id}>
+                      <SelectTrigger className="mt-1 h-9"><SelectValue placeholder="Unassigned" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {staff.map(s => <SelectItem key={s.id} value={s.id}>{s.full_name}{s.mobile ? ` · ${s.mobile}` : ""}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    {staff.length === 0 && <p className="text-xs text-muted-foreground mt-1">No delivery staff available yet.</p>}
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div><span className="text-muted-foreground">Customer:</span><p className="font-medium text-foreground">{(selectedOrder.profiles as any)?.full_name || "—"}</p></div>
