@@ -152,8 +152,8 @@ const AdminOrders = () => {
 
       <Card className="shadow-card">
         <CardHeader><CardTitle className="font-display text-lg">Orders ({filtered.length})</CardTitle></CardHeader>
-        <CardContent className="p-0">
-          <Table>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table className="min-w-[900px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Order ID</TableHead>
@@ -162,7 +162,7 @@ const AdminOrders = () => {
                 <TableHead>Amount</TableHead>
                 <TableHead className="hidden md:table-cell">Payment</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="hidden lg:table-cell">Delivery Staff</TableHead>
+                <TableHead>Delivery Staff</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -192,7 +192,7 @@ const AdminOrders = () => {
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell">
+                  <TableCell>
                     <Select value={o.delivery_staff_id || "unassigned"} onValueChange={(v) => assignStaff(o.id, v)} disabled={updating === o.id}>
                       <SelectTrigger className="h-8 w-[170px]"><SelectValue placeholder="Unassigned" /></SelectTrigger>
                       <SelectContent>
