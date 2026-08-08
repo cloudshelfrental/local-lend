@@ -7,7 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Search, Loader2, CheckCircle, XCircle, Users, Bell, Banknote, UserPlus, MapPin } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Search, Loader2, CheckCircle, XCircle, Users, Bell, Banknote, UserPlus, MapPin, ChevronDown } from "lucide-react";
 import DeliveryLocationsDialog from "@/components/DeliveryLocationsDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +38,7 @@ const AdminDelivery = () => {
   const [collections, setCollections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
+  const [expanded, setExpanded] = useState<string[]>([]);
   const [locStaff, setLocStaff] = useState<{ id: string; name: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ full_name: "", mobile: "", password: "", date_of_birth: "" });
