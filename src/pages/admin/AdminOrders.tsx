@@ -162,6 +162,7 @@ const AdminOrders = () => {
                 <TableHead>Amount</TableHead>
                 <TableHead className="hidden md:table-cell">Payment</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="hidden lg:table-cell">Delivery Staff</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
