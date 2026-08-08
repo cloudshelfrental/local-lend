@@ -75,7 +75,7 @@ const AdminOwners = () => {
           panchayath: (p.panchayaths as any)?.name || "—",
           ward: (p.wards as any)?.ward_number ? `Ward ${(p.wards as any).ward_number}` : "—",
           items: myItems.length,
-          activeItems: myItems.filter(i => i.status === "approved").length,
+          activeItems: myItems.filter(i => i.status === "active").length,
           itemList: myItems,
           orders: myOrders.length,
           revenue: myOrders.reduce((s: number, o: any) => s + Number(o.total_amount || 0), 0),
@@ -261,7 +261,7 @@ const AdminOwners = () => {
                   <TableCell className="font-body">{o.mobile}</TableCell>
                   <TableCell className="font-body text-muted-foreground text-sm">{o.panchayath} · {o.ward}</TableCell>
                   <TableCell className="font-body text-muted-foreground">{o.area}</TableCell>
-                  <TableCell className="font-display font-semibold">{o.items} <span className="text-xs text-muted-foreground font-body">({o.activeItems} approved)</span></TableCell>
+                  <TableCell className="font-display font-semibold">{o.items} <span className="text-xs text-muted-foreground font-body">({o.activeItems} active)</span></TableCell>
                   <TableCell className="font-display font-semibold">{o.orders}</TableCell>
                   <TableCell className="font-display font-semibold text-accent">₹{o.wallet.toLocaleString("en-IN")}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{o.joined}</TableCell>
@@ -304,7 +304,7 @@ const AdminOwners = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { label: "Items Listed", value: `${detail.items} (${detail.activeItems} approved)` },
+                  { label: "Items Listed", value: `${detail.items} (${detail.activeItems} active)` },
                   { label: "Total Orders", value: detail.orders },
                   { label: "Order Value", value: `₹${detail.revenue.toLocaleString("en-IN")}` },
                   { label: "Wallet", value: `₹${detail.wallet.toLocaleString("en-IN")}` },
