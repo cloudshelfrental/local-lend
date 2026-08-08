@@ -229,9 +229,27 @@ const AdminOrders = () => {
                 <DialogTitle className="font-display">{selectedOrder.order_number}</DialogTitle>
               </DialogHeader>
               <div className="space-y-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">Status:</span>
-                  <Badge className={statusColors[selectedOrder.status]}>{statusLabel(selectedOrder.status)}</Badge>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-muted/40 rounded-lg p-3">
+                  <div>
+                    <span className="text-muted-foreground text-xs">Order Status</span>
+                    <Select value={selectedOrder.status} onValueChange={(v) => changeStatus(selectedOrder.id, v)} disabled={updating === selectedOrder.id}>
+                      <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {allStatuses.map(s => <SelectItem key={s} value={s}>{statusLabel(s)}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-xs">Delivery Staff</span>
+                    <Select value={selectedOrder.delivery_staff_id || "unassigned"} onValueChange={(v) => assignStaff(selectedOrder.id, v)} disabled={updating === selectedOrder.id}>
+                      <SelectTrigger className="mt-1 h-9"><SelectValue placeholder="Unassigned" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {staff.map(s => <SelectItem key={s.id} value={s.id}>{s.full_name}{s.mobile ? ` · ${s.mobile}` : ""}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    {staff.length === 0 && <p className="text-xs text-muted-foreground mt-1">No delivery staff available yet.</p>}
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div><span className="text-muted-foreground">Customer:</span><p className="font-medium text-foreground">{(selectedOrder.profiles as any)?.full_name || "—"}</p></div>
