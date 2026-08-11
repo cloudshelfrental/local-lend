@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, CheckCircle, XCircle, Loader2, Eye, CreditCard, MapPin, Pencil } from "lucide-react";
+import { Search, CheckCircle, XCircle, Loader2, Eye, CreditCard, MapPin, Pencil, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -37,6 +37,8 @@ const AdminItems = () => {
   const [editItem, setEditItem] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [allCategories, setAllCategories] = useState<any[]>([]);
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [newItem, setNewItem] = useState<any>(null);
   const { toast } = useToast();
 
   const fetchItems = async () => {
@@ -66,7 +68,58 @@ const AdminItems = () => {
   useEffect(() => {
     fetchItems();
     supabase.from("categories").select("id, name").order("name").then(({ data }) => setAllCategories(data || []));
+    (async () => {
+      const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "owner");
+      const ids = [...new Set((roles || []).map(r => r.user_id))];
+      if (ids.length === 0) return;
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name, mobile").in("id", ids);
+      setVendors((profiles || []).sort((a, b) => (a.full_name || "").localeCompare(b.full_name || "")));
+    })();
   }, []);
+
+  const openCreate = () => {
+    setNewItem({
+      owner_id: "",
+      name: "",
+      description: "",
+      owner_price: "",
+      category_id: "",
+      payment_type: "cash_on_delivery",
+      status: "active",
+      image_url_1: "",
+      image_url_2: "",
+      image_url_3: "",
+    });
+  };
+
+  const createItem = async () => {
+    if (!newItem) return;
+    if (!newItem.owner_id) { toast({ title: "Vendor required", description: "Select a vendor for this item.", variant: "destructive" }); return; }
+    if (!newItem.name.trim()) { toast({ title: "Name required", variant: "destructive" }); return; }
+    if (!newItem.category_id) { toast({ title: "Category required", variant: "destructive" }); return; }
+
+    setSaving(true);
+    // Inherit the vendor's assigned area, if any
+    const { data: oa } = await supabase.from("owner_areas").select("area_id").eq("owner_id", newItem.owner_id).limit(1).maybeSingle();
+    const urls = [newItem.image_url_1, newItem.image_url_2, newItem.image_url_3].map((u: string) => u.trim()).filter(Boolean);
+
+    const { error } = await supabase.from("items").insert({
+      owner_id: newItem.owner_id,
+      name: newItem.name.trim(),
+      description: newItem.description.trim() || null,
+      owner_price: parseFloat(newItem.owner_price) || 0,
+      category_id: newItem.category_id,
+      payment_type: newItem.payment_type,
+      status: newItem.status,
+      image_urls: urls,
+      area_id: oa?.area_id ?? null,
+    });
+    setSaving(false);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Item added" });
+    setNewItem(null);
+    fetchItems();
+  };
 
   const openEdit = (item: any) => {
     setEditItem({
@@ -124,9 +177,12 @@ const AdminItems = () => {
 
   return (
     <div className="space-y-4">
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search items or vendors..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[220px] max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search items or vendors..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+        </div>
+        <Button onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> Add Item</Button>
       </div>
 
       <Card className="shadow-card">
