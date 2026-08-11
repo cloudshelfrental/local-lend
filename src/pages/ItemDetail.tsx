@@ -376,6 +376,41 @@ const ItemDetail = () => {
 
           <div className="space-y-4">
             <div>
+              <Label className="font-body">Rental Dates</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn("w-full mt-1 justify-start text-left font-normal", !dateRange?.from && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    {dateRange?.from
+                      ? dateRange.to
+                        ? `${format(dateRange.from, "dd MMM")} – ${format(dateRange.to, "dd MMM yyyy")}`
+                        : format(dateRange.from, "dd MMM yyyy")
+                      : "Pick rental dates"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={1}
+                    disabled={{ before: startOfDay(new Date()) }}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+              {rentalDays > 0 && (
+                <p className="text-xs text-muted-foreground font-body mt-1">
+                  {rentalDays} {rentalDays === 1 ? "day" : "days"} selected
+                </p>
+              )}
+            </div>
+
+            <div>
               <Label htmlFor="address" className="font-body">Delivery Address</Label>
               <Input
                 id="address"
@@ -421,7 +456,20 @@ const ItemDetail = () => {
             </div>
 
             <div className="bg-muted/50 rounded-lg p-3 text-sm font-body">
-              <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-bold text-primary">₹{total.toLocaleString("en-IN")}</span></div>
+              <div className="flex justify-between mb-1">
+                <span className="text-muted-foreground">
+                  Rental (₹{Number(item?.owner_price || 0).toLocaleString("en-IN")} × {Math.max(rentalDays, 1)} {Math.max(rentalDays, 1) === 1 ? "day" : "days"})
+                </span>
+                <span className="text-foreground font-medium">₹{(Number(item?.owner_price || 0) * Math.max(rentalDays, 1)).toLocaleString("en-IN")}</span>
+              </div>
+              <div className="flex justify-between mb-1">
+                <span className="text-muted-foreground">Delivery</span>
+                <span className="text-foreground font-medium">₹{deliveryCharge}</span>
+              </div>
+              <div className="flex justify-between border-t border-border pt-1.5 mt-1.5">
+                <span className="text-muted-foreground">Total</span>
+                <span className="font-bold text-primary">₹{(Number(item?.owner_price || 0) * Math.max(rentalDays, 1) + deliveryCharge).toLocaleString("en-IN")}</span>
+              </div>
             </div>
           </div>
 
