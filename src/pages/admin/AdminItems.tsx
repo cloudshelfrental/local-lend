@@ -354,6 +354,67 @@ const AdminItems = () => {
       </Dialog>
 
       {/* Edit Item Dialog */}
+      {/* Add Item Dialog */}
+      <Dialog open={!!newItem} onOpenChange={(open) => !open && setNewItem(null)}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle className="font-display text-xl">Add Item for a Vendor</DialogTitle></DialogHeader>
+          {newItem && (
+            <div className="space-y-3">
+              <div className="space-y-1.5"><Label>Vendor</Label>
+                <Select value={newItem.owner_id} onValueChange={v => setNewItem({ ...newItem, owner_id: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select vendor" /></SelectTrigger>
+                  <SelectContent>
+                    {vendors.length === 0 && <div className="px-2 py-1.5 text-sm text-muted-foreground">No vendors found</div>}
+                    {vendors.map(v => <SelectItem key={v.id} value={v.id}>{v.full_name} · {v.mobile}</SelectItem>)}
+                  </SelectContent>
+                </Select></div>
+              <div className="space-y-1.5"><Label>Name</Label>
+                <Input value={newItem.name} onChange={e => setNewItem({ ...newItem, name: e.target.value })} /></div>
+              <div className="space-y-1.5"><Label>Description</Label>
+                <Textarea value={newItem.description} onChange={e => setNewItem({ ...newItem, description: e.target.value })} /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5"><Label>Rental Price (₹)</Label>
+                  <Input type="number" value={newItem.owner_price} onChange={e => setNewItem({ ...newItem, owner_price: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>Category</Label>
+                  <Select value={newItem.category_id} onValueChange={v => setNewItem({ ...newItem, category_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                    <SelectContent>{allCategories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                  </Select></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5"><Label>Payment Type</Label>
+                  <Select value={newItem.payment_type} onValueChange={v => setNewItem({ ...newItem, payment_type: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="prepaid">Prepaid</SelectItem>
+                      <SelectItem value="cash_on_delivery">Cash on Delivery</SelectItem>
+                    </SelectContent>
+                  </Select></div>
+                <div className="space-y-1.5"><Label>Status</Label>
+                  <Select value={newItem.status} onValueChange={v => setNewItem({ ...newItem, status: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="pending_approval">Pending</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select></div>
+              </div>
+              {[1, 2, 3].map(n => (
+                <div key={n} className="space-y-1.5"><Label>Image URL {n}</Label>
+                  <Input value={newItem[`image_url_${n}`]} onChange={e => setNewItem({ ...newItem, [`image_url_${n}`]: e.target.value })} placeholder="https://..." /></div>
+              ))}
+              <div className="flex gap-2 pt-2">
+                <Button className="flex-1" onClick={createItem} disabled={saving}>
+                  {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Add Item
+                </Button>
+                <Button variant="outline" onClick={() => setNewItem(null)}>Cancel</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!editItem} onOpenChange={(open) => !open && setEditItem(null)}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="font-display text-xl">Edit Item</DialogTitle></DialogHeader>
