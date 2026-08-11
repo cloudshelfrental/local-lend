@@ -300,6 +300,7 @@ export type Database = {
           delivery_address: string | null
           delivery_charge: number
           delivery_staff_id: string | null
+          end_date: string | null
           id: string
           item_id: string
           order_number: string
@@ -307,6 +308,8 @@ export type Database = {
           owner_price: number
           payment_method: Database["public"]["Enums"]["payment_method"]
           picked_up_at: string | null
+          rental_days: number
+          start_date: string | null
           status: Database["public"]["Enums"]["order_status"]
           total_amount: number
           updated_at: string
@@ -321,6 +324,7 @@ export type Database = {
           delivery_address?: string | null
           delivery_charge: number
           delivery_staff_id?: string | null
+          end_date?: string | null
           id?: string
           item_id: string
           order_number: string
@@ -328,6 +332,8 @@ export type Database = {
           owner_price: number
           payment_method?: Database["public"]["Enums"]["payment_method"]
           picked_up_at?: string | null
+          rental_days?: number
+          start_date?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           total_amount: number
           updated_at?: string
@@ -342,6 +348,7 @@ export type Database = {
           delivery_address?: string | null
           delivery_charge?: number
           delivery_staff_id?: string | null
+          end_date?: string | null
           id?: string
           item_id?: string
           order_number?: string
@@ -349,6 +356,8 @@ export type Database = {
           owner_price?: number
           payment_method?: Database["public"]["Enums"]["payment_method"]
           picked_up_at?: string | null
+          rental_days?: number
+          start_date?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           total_amount?: number
           updated_at?: string
