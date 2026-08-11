@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2, ChevronLeft, ChevronRight, Play } from "lucide-react";
+import { ArrowLeft, Loader2, ChevronLeft, ChevronRight, Play, CalendarIcon } from "lucide-react";
+import { format, differenceInCalendarDays, startOfDay } from "date-fns";
+import type { DateRange } from "react-day-picker";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +43,14 @@ const ItemDetail = () => {
   const [wards, setWards] = useState<any[]>([]);
   const [selectedPanchayath, setSelectedPanchayath] = useState("");
   const [selectedWard, setSelectedWard] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
+  const rentalDays =
+    dateRange?.from && dateRange?.to
+      ? differenceInCalendarDays(dateRange.to, dateRange.from) + 1
+      : dateRange?.from
+        ? 1
+        : 0;
 
   useEffect(() => {
     const fetchItem = async () => {
@@ -120,6 +133,10 @@ const ItemDetail = () => {
   };
 
   const handlePlaceOrder = async () => {
+    if (!dateRange?.from) {
+      toast({ title: "Dates required", description: "Please pick your rental dates.", variant: "destructive" });
+      return;
+    }
     if (!deliveryAddress.trim()) {
       toast({ title: "Address required", description: "Please enter your delivery address.", variant: "destructive" });
       return;
@@ -135,7 +152,8 @@ const ItemDetail = () => {
       if (!session) throw new Error("Not authenticated");
 
       const commissionRate = (item.categories as any)?.commission_rate || 0;
-      const ownerPrice = Number(item.owner_price);
+      const days = Math.max(rentalDays, 1);
+      const ownerPrice = Number(item.owner_price) * days;
       const commissionAmount = ownerPrice * commissionRate / 100;
       const paymentMethod = item.payment_type || "cash_on_delivery";
       const totalAmount = ownerPrice + deliveryCharge;
@@ -163,6 +181,9 @@ const ItemDetail = () => {
         delivery_address: deliveryAddress,
         ward_id: selectedWard,
         payment_method: paymentMethod,
+        start_date: format(dateRange.from, "yyyy-MM-dd"),
+        end_date: format(dateRange.to ?? dateRange.from, "yyyy-MM-dd"),
+        rental_days: days,
       });
 
       if (error) throw error;
