@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2, ChevronLeft, ChevronRight, Play } from "lucide-react";
+import { ArrowLeft, Loader2, ChevronLeft, ChevronRight, Play, CalendarIcon } from "lucide-react";
+import { format, differenceInCalendarDays, startOfDay } from "date-fns";
+import type { DateRange } from "react-day-picker";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +43,14 @@ const ItemDetail = () => {
   const [wards, setWards] = useState<any[]>([]);
   const [selectedPanchayath, setSelectedPanchayath] = useState("");
   const [selectedWard, setSelectedWard] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
+  const rentalDays =
+    dateRange?.from && dateRange?.to
+      ? differenceInCalendarDays(dateRange.to, dateRange.from) + 1
+      : dateRange?.from
+        ? 1
+        : 0;
 
   useEffect(() => {
     const fetchItem = async () => {
@@ -120,6 +133,10 @@ const ItemDetail = () => {
   };
 
   const handlePlaceOrder = async () => {
+    if (!dateRange?.from) {
+      toast({ title: "Dates required", description: "Please pick your rental dates.", variant: "destructive" });
+      return;
+    }
     if (!deliveryAddress.trim()) {
       toast({ title: "Address required", description: "Please enter your delivery address.", variant: "destructive" });
       return;
@@ -135,7 +152,8 @@ const ItemDetail = () => {
       if (!session) throw new Error("Not authenticated");
 
       const commissionRate = (item.categories as any)?.commission_rate || 0;
-      const ownerPrice = Number(item.owner_price);
+      const days = Math.max(rentalDays, 1);
+      const ownerPrice = Number(item.owner_price) * days;
       const commissionAmount = ownerPrice * commissionRate / 100;
       const paymentMethod = item.payment_type || "cash_on_delivery";
       const totalAmount = ownerPrice + deliveryCharge;
@@ -163,6 +181,9 @@ const ItemDetail = () => {
         delivery_address: deliveryAddress,
         ward_id: selectedWard,
         payment_method: paymentMethod,
+        start_date: format(dateRange.from, "yyyy-MM-dd"),
+        end_date: format(dateRange.to ?? dateRange.from, "yyyy-MM-dd"),
+        rental_days: days,
       });
 
       if (error) throw error;
@@ -323,7 +344,7 @@ const ItemDetail = () => {
               <div className="bg-muted/50 rounded-xl p-4 space-y-2">
                 <h3 className="text-sm font-display font-semibold text-foreground mb-2">Pricing</h3>
                 <div className="flex justify-between text-sm font-body">
-                  <span className="text-muted-foreground">Rental Price</span>
+                  <span className="text-muted-foreground">Rental Price / day</span>
                   <span className="text-foreground font-medium">₹{Number(item.owner_price).toLocaleString("en-IN")}</span>
                 </div>
                 <div className="flex justify-between text-sm font-body">
@@ -354,6 +375,41 @@ const ItemDetail = () => {
           </DialogHeader>
 
           <div className="space-y-4">
+            <div>
+              <Label className="font-body">Rental Dates</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn("w-full mt-1 justify-start text-left font-normal", !dateRange?.from && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    {dateRange?.from
+                      ? dateRange.to
+                        ? `${format(dateRange.from, "dd MMM")} – ${format(dateRange.to, "dd MMM yyyy")}`
+                        : format(dateRange.from, "dd MMM yyyy")
+                      : "Pick rental dates"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={1}
+                    disabled={{ before: startOfDay(new Date()) }}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+              {rentalDays > 0 && (
+                <p className="text-xs text-muted-foreground font-body mt-1">
+                  {rentalDays} {rentalDays === 1 ? "day" : "days"} selected
+                </p>
+              )}
+            </div>
+
             <div>
               <Label htmlFor="address" className="font-body">Delivery Address</Label>
               <Input
@@ -400,7 +456,20 @@ const ItemDetail = () => {
             </div>
 
             <div className="bg-muted/50 rounded-lg p-3 text-sm font-body">
-              <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-bold text-primary">₹{total.toLocaleString("en-IN")}</span></div>
+              <div className="flex justify-between mb-1">
+                <span className="text-muted-foreground">
+                  Rental (₹{Number(item?.owner_price || 0).toLocaleString("en-IN")} × {Math.max(rentalDays, 1)} {Math.max(rentalDays, 1) === 1 ? "day" : "days"})
+                </span>
+                <span className="text-foreground font-medium">₹{(Number(item?.owner_price || 0) * Math.max(rentalDays, 1)).toLocaleString("en-IN")}</span>
+              </div>
+              <div className="flex justify-between mb-1">
+                <span className="text-muted-foreground">Delivery</span>
+                <span className="text-foreground font-medium">₹{deliveryCharge}</span>
+              </div>
+              <div className="flex justify-between border-t border-border pt-1.5 mt-1.5">
+                <span className="text-muted-foreground">Total</span>
+                <span className="font-bold text-primary">₹{(Number(item?.owner_price || 0) * Math.max(rentalDays, 1) + deliveryCharge).toLocaleString("en-IN")}</span>
+              </div>
             </div>
           </div>
 

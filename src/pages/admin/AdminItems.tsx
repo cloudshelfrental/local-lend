@@ -136,7 +136,7 @@ const AdminItems = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Item Name</TableHead>
-                <TableHead className="hidden md:table-cell">Vendor</TableHead>
+                <TableHead >Vendor</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead className="hidden md:table-cell">Commission</TableHead>
@@ -153,7 +153,7 @@ const AdminItems = () => {
                 return (
                   <TableRow key={item.id}>
                     <TableCell className="font-display font-medium">{item.name}</TableCell>
-                    <TableCell className="hidden md:table-cell font-body text-muted-foreground">{item.vendor_name}</TableCell>
+                    <TableCell className="font-body text-muted-foreground">{item.vendor_name}</TableCell>
                     <TableCell><Badge variant="secondary">{(item.categories as any)?.name || "—"}</Badge></TableCell>
                     <TableCell className="font-display font-semibold">₹{Number(item.owner_price).toLocaleString("en-IN")}</TableCell>
                     <TableCell className="hidden md:table-cell font-display text-accent font-semibold">₹{commission.toLocaleString("en-IN")}</TableCell>
