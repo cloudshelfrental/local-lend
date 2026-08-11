@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, CheckCircle, XCircle, Loader2, Eye, CreditCard, MapPin, Pencil } from "lucide-react";
+import { Search, CheckCircle, XCircle, Loader2, Eye, CreditCard, MapPin, Pencil, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -37,6 +37,8 @@ const AdminItems = () => {
   const [editItem, setEditItem] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [allCategories, setAllCategories] = useState<any[]>([]);
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [newItem, setNewItem] = useState<any>(null);
   const { toast } = useToast();
 
   const fetchItems = async () => {
@@ -66,7 +68,58 @@ const AdminItems = () => {
   useEffect(() => {
     fetchItems();
     supabase.from("categories").select("id, name").order("name").then(({ data }) => setAllCategories(data || []));
+    (async () => {
+      const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "owner");
+      const ids = [...new Set((roles || []).map(r => r.user_id))];
+      if (ids.length === 0) return;
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name, mobile").in("id", ids);
+      setVendors((profiles || []).sort((a, b) => (a.full_name || "").localeCompare(b.full_name || "")));
+    })();
   }, []);
+
+  const openCreate = () => {
+    setNewItem({
+      owner_id: "",
+      name: "",
+      description: "",
+      owner_price: "",
+      category_id: "",
+      payment_type: "cash_on_delivery",
+      status: "active",
+      image_url_1: "",
+      image_url_2: "",
+      image_url_3: "",
+    });
+  };
+
+  const createItem = async () => {
+    if (!newItem) return;
+    if (!newItem.owner_id) { toast({ title: "Vendor required", description: "Select a vendor for this item.", variant: "destructive" }); return; }
+    if (!newItem.name.trim()) { toast({ title: "Name required", variant: "destructive" }); return; }
+    if (!newItem.category_id) { toast({ title: "Category required", variant: "destructive" }); return; }
+
+    setSaving(true);
+    // Inherit the vendor's assigned area, if any
+    const { data: oa } = await supabase.from("owner_areas").select("area_id").eq("owner_id", newItem.owner_id).limit(1).maybeSingle();
+    const urls = [newItem.image_url_1, newItem.image_url_2, newItem.image_url_3].map((u: string) => u.trim()).filter(Boolean);
+
+    const { error } = await supabase.from("items").insert({
+      owner_id: newItem.owner_id,
+      name: newItem.name.trim(),
+      description: newItem.description.trim() || null,
+      owner_price: parseFloat(newItem.owner_price) || 0,
+      category_id: newItem.category_id,
+      payment_type: newItem.payment_type,
+      status: newItem.status,
+      image_urls: urls,
+      area_id: oa?.area_id ?? null,
+    });
+    setSaving(false);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Item added" });
+    setNewItem(null);
+    fetchItems();
+  };
 
   const openEdit = (item: any) => {
     setEditItem({
@@ -124,9 +177,12 @@ const AdminItems = () => {
 
   return (
     <div className="space-y-4">
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search items or vendors..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[220px] max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search items or vendors..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+        </div>
+        <Button onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> Add Item</Button>
       </div>
 
       <Card className="shadow-card">
@@ -298,6 +354,67 @@ const AdminItems = () => {
       </Dialog>
 
       {/* Edit Item Dialog */}
+      {/* Add Item Dialog */}
+      <Dialog open={!!newItem} onOpenChange={(open) => !open && setNewItem(null)}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle className="font-display text-xl">Add Item for a Vendor</DialogTitle></DialogHeader>
+          {newItem && (
+            <div className="space-y-3">
+              <div className="space-y-1.5"><Label>Vendor</Label>
+                <Select value={newItem.owner_id} onValueChange={v => setNewItem({ ...newItem, owner_id: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select vendor" /></SelectTrigger>
+                  <SelectContent>
+                    {vendors.length === 0 && <div className="px-2 py-1.5 text-sm text-muted-foreground">No vendors found</div>}
+                    {vendors.map(v => <SelectItem key={v.id} value={v.id}>{v.full_name} · {v.mobile}</SelectItem>)}
+                  </SelectContent>
+                </Select></div>
+              <div className="space-y-1.5"><Label>Name</Label>
+                <Input value={newItem.name} onChange={e => setNewItem({ ...newItem, name: e.target.value })} /></div>
+              <div className="space-y-1.5"><Label>Description</Label>
+                <Textarea value={newItem.description} onChange={e => setNewItem({ ...newItem, description: e.target.value })} /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5"><Label>Rental Price (₹)</Label>
+                  <Input type="number" value={newItem.owner_price} onChange={e => setNewItem({ ...newItem, owner_price: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>Category</Label>
+                  <Select value={newItem.category_id} onValueChange={v => setNewItem({ ...newItem, category_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                    <SelectContent>{allCategories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                  </Select></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5"><Label>Payment Type</Label>
+                  <Select value={newItem.payment_type} onValueChange={v => setNewItem({ ...newItem, payment_type: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="prepaid">Prepaid</SelectItem>
+                      <SelectItem value="cash_on_delivery">Cash on Delivery</SelectItem>
+                    </SelectContent>
+                  </Select></div>
+                <div className="space-y-1.5"><Label>Status</Label>
+                  <Select value={newItem.status} onValueChange={v => setNewItem({ ...newItem, status: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="pending_approval">Pending</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select></div>
+              </div>
+              {[1, 2, 3].map(n => (
+                <div key={n} className="space-y-1.5"><Label>Image URL {n}</Label>
+                  <Input value={newItem[`image_url_${n}`]} onChange={e => setNewItem({ ...newItem, [`image_url_${n}`]: e.target.value })} placeholder="https://..." /></div>
+              ))}
+              <div className="flex gap-2 pt-2">
+                <Button className="flex-1" onClick={createItem} disabled={saving}>
+                  {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Add Item
+                </Button>
+                <Button variant="outline" onClick={() => setNewItem(null)}>Cancel</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!editItem} onOpenChange={(open) => !open && setEditItem(null)}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="font-display text-xl">Edit Item</DialogTitle></DialogHeader>
