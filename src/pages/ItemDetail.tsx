@@ -344,7 +344,7 @@ const ItemDetail = () => {
               <div className="bg-muted/50 rounded-xl p-4 space-y-2">
                 <h3 className="text-sm font-display font-semibold text-foreground mb-2">Pricing</h3>
                 <div className="flex justify-between text-sm font-body">
-                  <span className="text-muted-foreground">Rental Price</span>
+                  <span className="text-muted-foreground">Rental Price / day</span>
                   <span className="text-foreground font-medium">₹{Number(item.owner_price).toLocaleString("en-IN")}</span>
                 </div>
                 <div className="flex justify-between text-sm font-body">
