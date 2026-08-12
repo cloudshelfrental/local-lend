@@ -78,7 +78,7 @@ const SACommission = () => {
               <div className="space-y-2"><Label>Category Name</Label><Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Electronics" /></div>
               <div className="space-y-2"><Label>Commission Rate (%)</Label><Input type="number" value={newRate} onChange={e => setNewRate(e.target.value)} placeholder="e.g. 10" /></div>
               <div className="space-y-2">
-                <Label>Category Image URL</Label>
+                <Label>Category Image</Label>
                 <Input value={newImage} onChange={e => setNewImage(e.target.value)} placeholder="https://..." />
                 {newImage && <img src={newImage} alt="Category preview" className="h-16 w-16 rounded-lg object-cover border border-border" />}
               </div>
