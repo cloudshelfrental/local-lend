@@ -590,6 +590,39 @@ export type Database = {
         }
         Relationships: []
       }
+      storage_config: {
+        Row: {
+          cloudinary_cloud_name: string | null
+          cloudinary_upload_preset: string | null
+          created_at: string
+          fallback_to_supabase: boolean
+          folder: string | null
+          id: string
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          cloudinary_cloud_name?: string | null
+          cloudinary_upload_preset?: string | null
+          created_at?: string
+          fallback_to_supabase?: boolean
+          folder?: string | null
+          id?: string
+          provider?: string
+          updated_at?: string
+        }
+        Update: {
+          cloudinary_cloud_name?: string | null
+          cloudinary_upload_preset?: string | null
+          created_at?: string
+          fallback_to_supabase?: boolean
+          folder?: string | null
+          id?: string
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
