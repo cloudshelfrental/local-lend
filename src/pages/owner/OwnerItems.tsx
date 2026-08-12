@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Loader2, Package, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import ImageUploadField from "@/components/ImageUploadField";
 
 interface Item {
   id: string;
@@ -87,7 +88,7 @@ const OwnerItems = () => {
   const handleSubmit = async () => {
     const urls = [form.image_url_1, form.image_url_2, form.image_url_3].filter(Boolean);
     if (urls.length < 3) {
-      toast({ title: "Please provide at least 3 image URLs", variant: "destructive" });
+      toast({ title: "Please upload 3 images", variant: "destructive" });
       return;
     }
     if (!form.name || !form.category_id || !form.owner_price) {
@@ -200,18 +201,9 @@ const OwnerItems = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>Image URL 1 *</Label>
-              <Input value={form.image_url_1} onChange={e => setForm(f => ({ ...f, image_url_1: e.target.value }))} />
-            </div>
-            <div>
-              <Label>Image URL 2 *</Label>
-              <Input value={form.image_url_2} onChange={e => setForm(f => ({ ...f, image_url_2: e.target.value }))} />
-            </div>
-            <div>
-              <Label>Image URL 3 *</Label>
-              <Input value={form.image_url_3} onChange={e => setForm(f => ({ ...f, image_url_3: e.target.value }))} />
-            </div>
+            <ImageUploadField label="Image 1 *" value={form.image_url_1} onChange={v => setForm(f => ({ ...f, image_url_1: v }))} />
+            <ImageUploadField label="Image 2 *" value={form.image_url_2} onChange={v => setForm(f => ({ ...f, image_url_2: v }))} />
+            <ImageUploadField label="Image 3 *" value={form.image_url_3} onChange={v => setForm(f => ({ ...f, image_url_3: v }))} />
             <div>
               <Label>YouTube Video Link (optional)</Label>
               <Input
