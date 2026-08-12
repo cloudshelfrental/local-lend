@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, CheckCircle, XCircle, Loader2, Eye, CreditCard, MapPin, Pencil, Plus } from "lucide-react";
+import ImageUploadField from "@/components/ImageUploadField";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -401,8 +402,7 @@ const AdminItems = () => {
                   </Select></div>
               </div>
               {[1, 2, 3].map(n => (
-                <div key={n} className="space-y-1.5"><Label>Image URL {n}</Label>
-                  <Input value={newItem[`image_url_${n}`]} onChange={e => setNewItem({ ...newItem, [`image_url_${n}`]: e.target.value })} placeholder="https://..." /></div>
+                <ImageUploadField key={n} label={`Image ${n}`} value={newItem[`image_url_${n}`]} onChange={v => setNewItem({ ...newItem, [`image_url_${n}`]: v })} />
               ))}
               <div className="flex gap-2 pt-2">
                 <Button className="flex-1" onClick={createItem} disabled={saving}>
@@ -454,8 +454,7 @@ const AdminItems = () => {
                   </Select></div>
               </div>
               {[1, 2, 3].map(n => (
-                <div key={n} className="space-y-1.5"><Label>Image URL {n}</Label>
-                  <Input value={editItem[`image_url_${n}`]} onChange={e => setEditItem({ ...editItem, [`image_url_${n}`]: e.target.value })} placeholder="https://..." /></div>
+                <ImageUploadField key={n} label={`Image ${n}`} value={editItem[`image_url_${n}`]} onChange={v => setEditItem({ ...editItem, [`image_url_${n}`]: v })} />
               ))}
               <div className="flex gap-2 pt-2">
                 <Button className="flex-1" onClick={saveEdit} disabled={saving}>

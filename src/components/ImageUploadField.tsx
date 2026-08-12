@@ -1,12 +1,10 @@
 import { useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Upload, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-const TEN_YEARS = 60 * 60 * 24 * 365 * 10;
+import { uploadImage } from "@/lib/imageUpload";
 
 interface Props {
   label: string;
@@ -29,22 +27,14 @@ const ImageUploadField = ({ label, value, onChange }: Props) => {
       return;
     }
     setUploading(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    const ext = file.name.split(".").pop() || "jpg";
-    const path = `${session?.user.id || "anon"}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await supabase.storage.from("item-images").upload(path, file, { upsert: false });
-    if (error) {
+    try {
+      const { url, fellBack } = await uploadImage(file);
+      onChange(url);
+      toast({ title: fellBack ? "Image uploaded (backup storage used)" : "Image uploaded" });
+    } catch (err) {
+      toast({ title: "Upload failed", description: (err as Error).message, variant: "destructive" });
+    } finally {
       setUploading(false);
-      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
-      return;
-    }
-    const { data: signed } = await supabase.storage.from("item-images").createSignedUrl(path, TEN_YEARS);
-    setUploading(false);
-    if (signed?.signedUrl) {
-      onChange(signed.signedUrl);
-      toast({ title: "Image uploaded" });
-    } else {
-      toast({ title: "Could not generate image link", variant: "destructive" });
     }
   };
 

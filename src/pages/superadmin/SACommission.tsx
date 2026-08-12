@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Percent, Plus, Loader2, ImageIcon, Trash2 } from "lucide-react";
+import ImageUploadField from "@/components/ImageUploadField";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -77,11 +78,7 @@ const SACommission = () => {
             <div className="space-y-4">
               <div className="space-y-2"><Label>Category Name</Label><Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Electronics" /></div>
               <div className="space-y-2"><Label>Commission Rate (%)</Label><Input type="number" value={newRate} onChange={e => setNewRate(e.target.value)} placeholder="e.g. 10" /></div>
-              <div className="space-y-2">
-                <Label>Category Image URL</Label>
-                <Input value={newImage} onChange={e => setNewImage(e.target.value)} placeholder="https://..." />
-                {newImage && <img src={newImage} alt="Category preview" className="h-16 w-16 rounded-lg object-cover border border-border" />}
-              </div>
+              <ImageUploadField label="Category Image" value={newImage} onChange={setNewImage} />
               <Button className="w-full" onClick={addCategory}>Add Category</Button>
             </div>
           </DialogContent>
@@ -102,7 +99,7 @@ const SACommission = () => {
               <TableRow key={c.id}>
                 <TableCell>
                   {editingId === c.id ? (
-                    <Input value={editImage} onChange={e => setEditImage(e.target.value)} placeholder="Image URL" className="w-48" />
+                    <div className="w-48"><ImageUploadField label="" value={editImage} onChange={setEditImage} /></div>
                   ) : c.image_url ? (
                     <img src={c.image_url} alt={c.name} className="h-10 w-10 rounded-lg object-cover border border-border" />
                   ) : (
